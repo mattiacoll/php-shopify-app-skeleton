@@ -5,151 +5,110 @@
 include 'config.php';
 include_once 'utils/utils.php';
 
-$query = array();
-parse_str($_SERVER['QUERY_STRING'], $query);
-$shop = str_replace('.myshopify.com', '', $_GET['shop']);
+$query = [];
+parse_str( $_SERVER['QUERY_STRING'], $query );
+
+$shop = str_replace( '.myshopify.com', '', $_GET['shop']);
 $hmac = $_GET['hmac'];
 
 $query_no_hmac = $query;
-unset($query_no_hmac['hmac']);
+unset( $query_no_hmac['hmac']);
 
-$message = http_build_query($query_no_hmac);
+$message = http_build_query( $query_no_hmac );
 
-if(verifyHMAC()){
-  $client_id = processClient($shop);
-  $nonce = generateNonce($client_id);
+if ( verifyHMAC() ) {
 
-  if($client_id == -1){
-    echo "Unable to process request. ERROR: O-R-1";
-    die();
-  }
+  $client_id = processClient( $shop );
+  $nonce     = generateNonce( $client_id );
 
-  header("Location: https://".$shop.".myshopify.com/admin/oauth/authorize?client_id=".$k."&scope=".implode(',', $permissions)."&redirect_uri=".$app_url."/postoauth.php&state=".$nonce);
+  if ( $client_id === -1 )
+    die( 'Unable to process request. ERROR: O-R-1' );
+
+  header( 'Location: https://'.$shop.'.myshopify.com/admin/oauth/authorize?client_id='.$k.'&scope='.implode( ',', $permissions ).'&redirect_uri='.$app_url.'/postoauth.php&state='.$nonce );
 
 }
 
-function processClient($shop){
+function processClient( $shop ) {
 
   global $sn, $dn, $un, $pw;
 
   $client_id = -1;
 
-  $dsn = "mysql:host=".$sn.";dbname=".$dn.";charset=utf8";
-  $opt = array(
+  $dsn = 'mysql:host='.$sn.';dbname='.$dn.';charset=utf8';
+  $opt = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-  );
+  ];
 
+  try {
 
+    $pdo = new PDO( $dsn, $un, $pw, $opt );
+    $stm = $pdo->prepare( 'SELECT client_id FROM clients WHERE client_name = ?' );
 
-  $return_check = $pdo = new PDO($dsn, $un, $pw, $opt);
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-PC-1";
-    die();
-  }
-  $return_check = $stm = $pdo->prepare("SELECT client_id FROM clients WHERE client_name = ?");
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-PC-2";
-    die();
-  }
-  $return_check = $stm->execute(array($shop));
+    $stm->execute([ $shop ]);
+    $stm->fetchAll();
 
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-PC-3";
-    die();
-  }
+    if ( count( $result ) )
+      $client_id = $result[0]['client_id'];
+    else
+      $client_id = createClient( $shop );
 
-  $result = $stm->fetchAll();
+    if ( $client_id === -1 )
+      die( 'Unable to process request. ERROR: O-PC-4' );
 
-  if(count($result) !== 0){
-    $client_id = $result[0]['client_id'];
-  }
-  else{
-    $client_id = createClient($shop);
-  }
+    $stm = $pdo->prepare( 'SELECT store_id FROM client_stores WHERE client_id = ?' );
+    $stm->execute([ $client_id ]);
 
-  if($client_id == -1){
-    echo "Unable to process request. ERROR: O-PC-4";
-    die();
-  }
+    $result = $stm->fetchAll();
 
-  $return_check = $stm = $pdo->prepare("SELECT store_id FROM client_stores WHERE client_id = ?");
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-PC-5";
-    die();
-  }
-  $return_check = $stm->execute(array($client_id));
+    if ( !count( $result ) ) {
 
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-PC-6";
-    die();
+      $stm = $pdo->prepare( 'INSERT INTO client_stores (client_id, store_name, url) VALUES (?, ?, ?)' );
+      $stm->execute([ $client_id, $shop, 'https://'.$shop.'.myshopify.com/' ]);
 
-  }
-
-  $result = $stm->fetchAll();
-
-  if(count($result) == 0){
-    $return_check = $stm = $pdo->prepare("INSERT INTO client_stores (client_id, store_name, url) VALUES (?, ?, ?)");
-
-    if($return_check === false){
-      echo "Unable to process request. ERROR: O-PC-7";
-      die();
     }
-    $return_check = $stm->execute(array($client_id, $shop, "https://".$shop.".myshopify.com/"));
-    if($return_check === false){
-      echo "Unable to process request. ERROR: O-PC-8";
-      die();
-    }
+
+    $pdo = null;
+
+  } catch ( PDOException $err ) {
+    die( 'Unable to process request. ' . $err->getMessage() );
   }
 
   return $client_id;
+
 }
 
-function createClient($shop){
+function createClient( $shop ) {
+
   global $sn, $dn, $un, $pw;
 
-  $dsn = "mysql:host=".$sn.";dbname=".$dn.";charset=utf8";
+  $dsn = 'mysql:host='.$sn.';dbname='.$dn.';charset=utf8';
   $opt = array(
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
   );
 
-  $return_check = $pdo = new PDO($dsn, $un, $pw, $opt);
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-CC-1";
-    die();
+  try {
+
+    $pdo = new PDO( $dsn, $un, $pw, $opt );
+
+    $stm = $pdo->prepare( 'INSERT INTO clients (client_name) VALUES (?)' );
+    $stm->execute([ $shop ]);
+
+    $stm = $pdo->prepare( 'SELECT client_id FROM clients WHERE client_name = ?' );
+    $stm->execute([ $shop ]);
+
+    $result = $stm->fetchAll();
+
+    $pdo = null;
+
+    if ( count( $result ) )
+      return $result[0]['client_id'];
+    else
+      return -1;
+
+  } catch ( PDOException $err ) {
+    die( 'Unable to process request. ' . $err->getMessage() );
   }
 
-  $return_check = $stm = $pdo->prepare("INSERT INTO clients (client_name) VALUES (?)");
-
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-CC-2";
-    die();
-  }
-  $return_check = $stm->execute(array($shop));
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-CC-3";
-    die();
-  }
-
-  $return_check = $stm = $pdo->prepare("SELECT client_id FROM clients WHERE client_name = ?");
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-CC-4";
-    die();
-  }
-  $return_check = $stm->execute(array($shop));
-
-  if($return_check === false){
-    echo "Unable to process request. ERROR: O-CC-5";
-    die();
-
-  }
-
-  $result = $stm->fetchAll();
-
-  if(count($result) !== 0){
-    return $result[0]['client_id'];
-  }
-
-  return -1;
 }
