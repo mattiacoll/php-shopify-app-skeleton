@@ -13,6 +13,21 @@ function verifyHMAC(){
 }
 
 
+function connect_db( &$pdo ) {
+
+  global $sn, $dn, $un, $pw;
+
+  $dsn = 'mysql:host='.$sn.';dbname='.$dn.';charset=utf8';
+  $opt = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+  ];
+
+  $pdo = new PDO( $dsn, $un, $pw, $opt );
+
+}
+
+
 function generateNonce( $client_id ) {
 
   $nonce = hash( 'sha256', makeRandomString() );
@@ -36,24 +51,18 @@ function makeRandomString( $bits = 256 ) {
 
 function storeNonce( $client_id, $nonce ) {
 
-  global $sn, $dn, $un, $pw;
+  try {
 
-  $dsn = 'mysql:host='.$sn.';dbname='.$dn.';charset=utf8';
-  $opt = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-  ];
+    $pdo;
+    connect_db( $pdo );
 
-  $return_check = $pdo = new PDO( $dsn, $un, $pw, $opt );
-  if ( !$return_check )
-    die( 'Unable to process request.' );
+    $stm = $pdo->prepare( 'UPDATE client_stores SET nonce = ? WHERE client_id = ?' );
+    $stm->execute([ $nonce, $client_id ]);
 
-  $return_check = $stm = $pdo->prepare( 'UPDATE client_stores SET nonce = ? WHERE client_id = ?' );
-  if ( !$return_check )
-    die( 'Unable to process request.' );
+    $pdo = null;
 
-  $return_check = $stm->execute([ $nonce, $client_id ]);
-  if ( !$return_check )
-    die( 'Unable to process request.' );
+  } catch ( PDOException $err ) {
+    die( 'Unable to process request. ' . $err->getMessage() );
+  }
 
 }

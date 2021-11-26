@@ -30,19 +30,13 @@ if ( verifyHMAC() ) {
 
 function processClient( $shop ) {
 
-  global $sn, $dn, $un, $pw;
-
   $client_id = -1;
-
-  $dsn = 'mysql:host='.$sn.';dbname='.$dn.';charset=utf8';
-  $opt = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-  ];
 
   try {
 
-    $pdo = new PDO( $dsn, $un, $pw, $opt );
+    $pdo;
+    connect_db( $pdo );
+
     $stm = $pdo->prepare( 'SELECT client_id FROM clients WHERE client_name = ?' );
 
     $stm->execute([ $shop ]);
@@ -80,17 +74,10 @@ function processClient( $shop ) {
 
 function createClient( $shop ) {
 
-  global $sn, $dn, $un, $pw;
-
-  $dsn = 'mysql:host='.$sn.';dbname='.$dn.';charset=utf8';
-  $opt = array(
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-  );
-
   try {
 
-    $pdo = new PDO( $dsn, $un, $pw, $opt );
+    $pdo;
+    connect_db( $pdo );
 
     $stm = $pdo->prepare( 'INSERT INTO clients (client_name) VALUES (?)' );
     $stm->execute([ $shop ]);
