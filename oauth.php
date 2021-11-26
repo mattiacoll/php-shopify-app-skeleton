@@ -3,6 +3,7 @@
 	//UA - User Authentication
 
 	include 'config.php';
+	include_once 'utils/utils.php';
 
 	$query = array();
 	parse_str($_SERVER['QUERY_STRING'], $query);
@@ -24,22 +25,6 @@
 		}
 
 		header("Location: https://".$shop.".myshopify.com/admin/oauth/authorize?client_id=".$k."&scope=".implode(',', $permissions)."&redirect_uri=https://phptestapp.xenithtech.com/postoauth.php&state=".$nonce);
-
-	}
-
-	function verifyHMAC(){
-		global $s;
-		global $message;
-		global $hmac;
-
-		$check = hash_hmac('sha256', $message, $s);
-
-		if($check == $hmac){
-			return true;
-		}
-		else{
-			return false;
-		}
 
 	}
 
@@ -167,49 +152,6 @@
 		}
 
 		return -1;
-	}
-
-	function generateNonce($client_id){
-	    $nonce = hash('sha256', makeRandomString());
-	    storeNonce($client_id, $nonce);
-	    return $nonce;
-	}
-
-	function makeRandomString($bits = 256) {
-	    $bytes = ceil($bits / 8);
-	    $return = '';
-	    for ($i = 0; $i < $bytes; $i++) {
-	        $return .= chr(mt_rand(0, 255));
-	    }
-	    return $return;
-	}
-
-	function storeNonce($client_id, $nonce){
-		global $sn, $dn, $un, $pw;
-
-		$dsn = "mysql:host=".$sn.";dbname=".$dn.";charset=utf8";
-		$opt = array(
-			PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-			PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-		);
-
-		$return_check = $pdo = new PDO($dsn, $un, $pw, $opt);
-		if($return_check === false){
-			echo "Unable to process request. ERROR: O-SN-1";
-			die();
-		}
-		$return_check = $stm = $pdo->prepare("UPDATE client_stores SET nonce = ? WHERE client_id = ?");
-		if($return_check === false){
-			echo "Unable to process request. ERROR: O-SN-2";
-			die();
-		}
-		$return_check = $stm->execute(array($nonce, $client_id));
-
-		if($return_check === false){
-			echo "Unable to process request. ERROR: O-SN-3";
-			die();
-
-		}
 	}
 
 ?>

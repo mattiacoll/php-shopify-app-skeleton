@@ -3,6 +3,7 @@
 	//AS - App Setup
 
 	include 'config.php';
+	include_once 'utils/utils.php';
 
 	$query = array();
 	parse_str($_SERVER['QUERY_STRING'], $query);
@@ -57,22 +58,6 @@
 		}
 		else{
 			die("Unable to process request. ERROR: PO-R-3");
-		}
-
-	}
-
-	function verifyHMAC(){
-		global $s;
-		global $message;
-		global $hmac;
-
-		$check = hash_hmac('sha256', $message, $s);
-
-		if($check == $hmac){
-			return true;
-		}
-		else{
-			return false;
 		}
 
 	}
@@ -215,50 +200,6 @@
 
 		if($return_check === false){
 			echo "Unable to process request. ERROR: PO-SH-3";
-			die();
-		}
-	}
-
-	function generateNonce($client_id){
-	    $nonce = hash('sha256', makeRandomString());
-	    storeNonce($client_id, $nonce);
-	    return $nonce;
-	}
-
-	function makeRandomString($bits = 256) {
-	    $bytes = ceil($bits / 8);
-	    $return = '';
-	    for ($i = 0; $i < $bytes; $i++) {
-	        $return .= chr(mt_rand(0, 255));
-	    }
-	    return $return;
-	}
-
-	function storeNonce($client_id, $nonce){
-		global $sn, $dn, $un, $pw;
-		
-		$dsn = "mysql:host=".$sn.";dbname=".$dn.";charset=utf8";
-		$opt = array(
-			PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-			PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-		);
-
-		ini_set('display_errors', 'Off');
-
-		$return_check = $pdo = new PDO($dsn, $un, $pw, $opt);
-		if($return_check === false){
-			echo "Unable to process request. ERROR: PO-SN-1";
-			die();
-		}
-		$return_check = $stm = $pdo->prepare("UPDATE client_stores SET nonce = ? WHERE client_id = ?");
-		if($return_check === false){
-			echo "Unable to process request. ERROR: PO-SN-2";
-			die();
-		}
-		$return_check = $stm->execute(array($nonce, $client_id));
-
-		if($return_check === false){
-			echo "Unable to process request. ERROR: PO-SN-3";
 			die();
 		}
 	}
