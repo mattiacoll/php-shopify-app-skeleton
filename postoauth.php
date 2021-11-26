@@ -16,7 +16,7 @@ unset($query_no_hmac['hmac']);
 
 $message = http_build_query($query_no_hmac);
 
-if(verifyHMAC()){
+if ( verifyHMAC( $hmac, $message ) ){
   $client_id = processClient($shop);
 
   if($client_id == -1){

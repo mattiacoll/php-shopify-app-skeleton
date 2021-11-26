@@ -6,7 +6,7 @@ $shop      = str_replace( '.myshopify.com', '', $_GET['shop']);
 $hmac      = $_GET['hmac'];
 $client_id = getClientId( $shop );
 
-if ( !verifyHMACClient( $hmac, $client_id ) )
+if ( !verifyHMAC( $hmac, '', $client_id ) )
   die( 'Unable to process request.' );
 
 ?>

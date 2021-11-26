@@ -4,18 +4,18 @@
 
 include_once 'utils/utils.php';
 
+$hmac  = $_GET['hmac'];
+
 $query = [];
 parse_str( $_SERVER['QUERY_STRING'], $query );
-
-$shop = str_replace( '.myshopify.com', '', $_GET['shop']);
-$hmac = $_GET['hmac'];
-
 $query_no_hmac = $query;
 unset( $query_no_hmac['hmac']);
 
 $message = http_build_query( $query_no_hmac );
 
-if ( verifyHMAC() ) {
+if ( verifyHMAC( $hmac, $message ) ) {
+
+  $shop = str_replace( '.myshopify.com', '', $_GET['shop']);
 
   $client_id = processClient( $shop );
   $nonce     = generateNonce( $client_id );

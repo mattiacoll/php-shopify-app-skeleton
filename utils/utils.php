@@ -2,11 +2,33 @@
 
 include_once 'config.php';
 
-function verifyHMAC() {
+function verifyHMAC( string $hmac, string $message, int $client_id = -1 ) {
 
   global $s;
-  global $message;
-  global $hmac;
+
+  // Get nonce if client_id is set
+  if ( $client_id !== -1 ) {
+
+    try {
+
+      $pdo;
+      connect_db( $pdo );
+
+      $stm = $pdo->prepare( 'SELECT nonce FROM client_stores WHERE client_id = ? AND last_activity >= NOW() - INTERVAL 10 SECOND AND active = 1' );
+      $stm->execute([ $client_id ]);
+
+      $result = $stm->fetchAll();
+
+      if ( count( $result ) )
+        $message = $result[0]['nonce'];
+      else
+        die( 'Unable to process request.' );
+
+    } catch ( PDOException $err ) {
+      die( 'Unable to process request. ' . $err->getMessage() );
+    }
+
+  }
 
   $check = hash_hmac( 'sha256', $message, $s );
 
@@ -94,29 +116,4 @@ function getClientId( $shop ) {
   }
 
   return $client_id;
-}
-
-function verifyHMACClient( $hmac, $client_id ) {
-
-  try {
-
-    $pdo;
-    connect_db( $pdo );
-
-    $stm = $pdo->prepare( 'SELECT nonce FROM client_stores WHERE client_id = ? AND last_activity >= NOW() - INTERVAL 10 SECOND AND active = 1' );
-    $stm->execute([ $client_id ]);
-
-    $result = $stm->fetchAll();
-
-    if ( count( $result ) )
-      $nonce = $result[0]['nonce'];
-
-    $check = hash_hmac( 'sha256', $nonce, $s );
-
-    return ( $check === $hmac );
-
-  } catch ( PDOException $err ) {
-    die( 'Unable to process request. ' . $err->getMessage() );
-  }
-
 }
