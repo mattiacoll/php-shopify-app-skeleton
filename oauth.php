@@ -24,7 +24,7 @@
 			die();
 		}
 
-		header("Location: https://".$shop.".myshopify.com/admin/oauth/authorize?client_id=".$k."&scope=".implode(',', $permissions)."&redirect_uri=https://phptestapp.xenithtech.com/postoauth.php&state=".$nonce);
+		header("Location: https://".$shop.".myshopify.com/admin/oauth/authorize?client_id=".$k."&scope=".implode(',', $permissions)."&redirect_uri=".$app_url."/postoauth.php&state=".$nonce);
 
 	}
 
