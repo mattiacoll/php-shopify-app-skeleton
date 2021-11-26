@@ -2,7 +2,6 @@
 
 //AS - App Setup
 
-include 'config.php';
 include_once 'utils/utils.php';
 
 $query = array();

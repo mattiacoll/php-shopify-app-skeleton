@@ -2,7 +2,6 @@
 
 //UA - User Authentication
 
-include 'config.php';
 include_once 'utils/utils.php';
 
 $query = [];
