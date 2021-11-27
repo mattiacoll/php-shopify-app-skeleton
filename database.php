@@ -1,5 +1,10 @@
 <?php
 
+/*
+  Creates the `clients` and `client_stores` tables
+  so that you don't have to do it manually
+*/
+
 include_once realpath( __DIR__ . '/utils.php' );
 
 try {
@@ -14,12 +19,7 @@ try {
   echo 'Created tables';
 
 } catch ( PDOException $err ) {
-
   die( 'Unable to process request. ' . $err->getMessage() );
-
 } finally {
-
-  if ( $pdo )
-    $pdo = null;
-
+  $pdo = null;
 }

@@ -6,28 +6,33 @@ include_once realpath( __DIR__ . '/utils.php' );
 
 $hmac  = $_GET['hmac'];
 
-$query = [];
 parse_str( $_SERVER['QUERY_STRING'], $query );
-$query_no_hmac = $query;
-unset( $query_no_hmac['hmac']);
+unset( $query['hmac']);
 
-$message = http_build_query( $query_no_hmac );
+$message = http_build_query( $query );
 
 if ( verifyHMAC( $hmac, $message ) ) {
 
   $shop = str_replace( '.myshopify.com', '', $_GET['shop']);
 
-  $client_id = processClient( $shop );
+  $client_id = createClientStore( $shop );
   $nonce     = generateNonce( $client_id );
 
   if ( $client_id === -1 )
-    die( 'Unable to process request. ERROR: O-R-1' );
+    die( 'Unable to process request. Invalid client ID.' );
 
   header( 'Location: https://'.$shop.'.myshopify.com/admin/oauth/authorize?client_id='.APP_KEY.'&scope='.APP_PERMISSION.'&redirect_uri='.APP_URL.'/postoauth.php&state='.$nonce );
 
 }
 
-function processClient( $shop ) {
+/**
+ * Creates a client in `client_stores` table
+ *
+ * @param string $shop - shop's name (test.myshopify.com)
+ *
+ * @return int the client's id or -1 if no user was found
+ */
+function createClientStore( string $shop ) {
 
   $client_id = -1;
 
@@ -46,7 +51,7 @@ function processClient( $shop ) {
       $client_id = createClient( $shop );
 
     if ( $client_id === -1 )
-      die( 'Unable to process request. ERROR: O-PC-4' );
+      throw new Exception( 'Invalid client ID.' );
 
     $stm = $pdo->prepare( 'SELECT store_id FROM client_stores WHERE client_id = ?' );
     $stm->execute([ $client_id ]);
@@ -60,17 +65,24 @@ function processClient( $shop ) {
 
     }
 
-    $pdo = null;
-
-  } catch ( PDOException $err ) {
+  } catch ( PDOException | Exception $err ) {
     die( 'Unable to process request. ' . $err->getMessage() );
+  } finally {
+    $pdo = null;
   }
 
   return $client_id;
 
 }
 
-function createClient( $shop ) {
+/**
+ * Creates a client in `clients` table
+ *
+ * @param string $shop - shop's name (test.myshopify.com)
+ *
+ * @return int the client's id or -1 if no user was found
+ */
+function createClient( string $shop ) {
 
   try {
 
@@ -79,20 +91,12 @@ function createClient( $shop ) {
     $stm = $pdo->prepare( 'INSERT INTO clients (client_name) VALUES (?)' );
     $stm->execute([ $shop ]);
 
-    $stm = $pdo->prepare( 'SELECT client_id FROM clients WHERE client_name = ?' );
-    $stm->execute([ $shop ]);
-
-    $result = $stm->fetchAll();
-
-    $pdo = null;
-
-    if ( count( $result ) )
-      return $result[0]['client_id'];
-    else
-      return -1;
+    return getClientId( $shop );
 
   } catch ( PDOException $err ) {
     die( 'Unable to process request. ' . $err->getMessage() );
+  } finally {
+    $pdo = null;
   }
 
 }

@@ -1,42 +1,34 @@
 <?php
 
-//AS - App Setup
-
 include_once realpath( __DIR__ . '/utils.php' );
 
-$query = [];
-parse_str( $_SERVER['QUERY_STRING'], $query );
-$shop  = $_GET['shop'];
-$code  = $_GET['code'];
 $hmac  = $_GET['hmac'];
 $nonce = $_GET['state'];
 
-$query_no_hmac = $query;
-unset( $query_no_hmac['hmac']);
+$query = [];
+parse_str( $_SERVER['QUERY_STRING'], $query );
+unset( $query['hmac']);
 
-$message = http_build_query( $query_no_hmac );
-
-if ( !function_exists( 'str_ends_with' ) ) {
-  function str_ends_with( $haystack, $needle ) {
-    return substr_compare( $haystack, $needle, -strlen( $needle ) ) === 0;
-  }
-}
+$message = http_build_query( $query );
 
 if ( verifyHMAC( $hmac, $message ) ) {
+
+  $shop  = $_GET['shop'];
+  $code  = $_GET['code'];
 
   $client_id = getClientId( $shop );
 
   if ( $client_id === -1 )
-    die( 'Unable to process request. ERROR: PO-R-1' );
+    die( 'Unable to process request. Invalid client id.' );
 
   if ( !verifyNonce( $client_id, $nonce ) )
-    die( 'Unable to process request. ERROR: PO-R-3' );
+    die( 'Unable to process request. Invalid nonce.' );
 
   if ( !verifyHost( $shop ) )
-    die( 'Unable to process request. ERROR: PO-R-2' );
+    die( 'Unable to process request. Invalid host.' );
 
 
-  $query = [
+  $curl_query = [
     'client_id'     => APP_KEY,
     'client_secret' => APP_SECRET,
     'code'          => $code,
@@ -48,8 +40,8 @@ if ( verifyHMAC( $hmac, $message ) ) {
   curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
   curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, 0 );
   curl_setopt( $ch, CURLOPT_URL, $access_token_url );
-  curl_setopt( $ch, CURLOPT_POST, count( $query ) );
-  curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query( $query ) );
+  curl_setopt( $ch, CURLOPT_POST, count( $curl_query ) );
+  curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query( $curl_query ) );
 
   $result = curl_exec( $ch );
   curl_close( $ch );
@@ -65,7 +57,15 @@ if ( verifyHMAC( $hmac, $message ) ) {
 
 }
 
-function verifyNonce( $client_id, $nonce ) {
+/**
+ * Verifies the nonce
+ *
+ * @param int $client_id - the client's id
+ * @param string $nonce - the nonce to be verified
+ *
+ * @return boolean valid or not nonce
+ */
+function verifyNonce( int $client_id, string $nonce ) {
 
   try {
 
@@ -85,18 +85,20 @@ function verifyNonce( $client_id, $nonce ) {
     return ( $nonce === $check );
 
   } catch ( PDOException $err ) {
-
     die( 'Unable to process request. ' . $err->getMessage() );
-
   } finally {
-
-    if ( $pdo )
-      $pdo = null;
-
+    $pdo = null;
   }
 }
 
-function verifyHost( $shop ) {
+/**
+ * Verifies if the host is a shopify url
+ *
+ * @param string $shop - the shop's host (test.myshopify.com)
+ *
+ * @return boolean valid or not host
+ */
+function verifyHost( string $shop ) {
 
   if ( !str_ends_with( $shop, '.myshopify.com' ) )
     return false;
@@ -106,7 +108,14 @@ function verifyHost( $shop ) {
 
 }
 
-function generateHMAC( $client_id ) {
+/**
+ * Generates the hmac
+ *
+ * @param int - $client_id
+ *
+ * @return string - the generated hmac
+ */
+function generateHMAC( int $client_id ) {
 
   $nonce = generateNonce( $client_id );
   $hmac  = hash_hmac( 'sha256', $nonce, APP_SECRET );
@@ -117,8 +126,13 @@ function generateHMAC( $client_id ) {
 
 }
 
-
-function storeHMAC( $client_id, $hmac ) {
+/**
+ * Stores the generated hmac
+ *
+ * @param int $client_id - the client's id
+ * @param string $hmac - the hmac
+ */
+function storeHMAC( int $client_id, string $hmac ) {
 
   try {
 
@@ -128,18 +142,19 @@ function storeHMAC( $client_id, $hmac ) {
     $stm->execute([ $hmac, $client_id ]);
 
   } catch ( PDOException $err ) {
-
     die( 'Unable to process request. ' . $err->getMessage() );
-
   } finally {
-
-    if ( $pdo )
-      $pdo = null;
-
+    $pdo = null;
   }
 }
 
-function storeToken( $client_id, $token ) {
+/**
+ * Stores the shop's token
+ *
+ * @param int $client_id - the client's id
+ * @param string $token - the token
+ */
+function storeToken( int $client_id, string $token ) {
 
   try {
 
@@ -149,13 +164,8 @@ function storeToken( $client_id, $token ) {
     $stm->execute([ $token, $client_id ]);
 
   } catch ( PDOException $err ) {
-
     die( 'Unable to process request. ' . $err->getMessage() );
-
   } finally {
-
-    if ( $pdo )
-      $pdo = null;
-
+    $pdo = null;
   }
 }
