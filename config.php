@@ -1,18 +1,23 @@
 <?php
 
 #Database configuration
-$sn = '';
-$un = '';
-$pw = '';
-$dn = '';
+define( 'DB_HOST', '' );
+define( 'DB_USER', '' );
+define( 'DB_PASSWORD', '' );
+define( 'DB_NAME', '' );
 
-#Shopify configuration
-$k = '';		#App Key
-$s = '';		#App Secret
-$app_url      = 'https://yourapplocation';
-$redirect_url = $app_url . '/index.php';	#Redirect URL for after handshake
-$permissions = [
-  'read_orders',										#List what ever permissions your app will need here
+#APP configuration
+define( 'APP_KEY', '' );
+define( 'APP_SECRET', '' );
+
+define( 'APP_URL', 'https://yourapplocation' );
+
+// Redirect URL for after handshake
+define( 'APP_REDIRECT', APP_URL . '/index.php' );
+
+// Refer to https://shopify.dev/api/usage/access-scopes
+define( 'APP_PERMISSION', implode( ',', [
+  'read_orders',
   'read_script_tags',
-  'write_script_tags'
-];
+  'write_script_tags',
+]) );

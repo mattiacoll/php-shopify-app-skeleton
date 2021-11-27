@@ -4,8 +4,6 @@ include_once 'config.php';
 
 function verifyHMAC( string $hmac, string $message, int $client_id = -1 ) {
 
-  global $s;
-
   // Get nonce if client_id is set
   if ( $client_id !== -1 ) {
 
@@ -36,7 +34,7 @@ function verifyHMAC( string $hmac, string $message, int $client_id = -1 ) {
 
   }
 
-  $check = hash_hmac( 'sha256', $message, $s );
+  $check = hash_hmac( 'sha256', $message, APP_SECRET );
 
   return ( $check === $hmac );
 
@@ -45,15 +43,13 @@ function verifyHMAC( string $hmac, string $message, int $client_id = -1 ) {
 
 function connect_db() {
 
-  global $sn, $dn, $un, $pw;
-
-  $dsn = 'mysql:host='.$sn.';dbname='.$dn.';charset=utf8';
+  $dsn = 'mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8';
   $opt = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
   ];
 
-  return new PDO( $dsn, $un, $pw, $opt );
+  return new PDO( $dsn, DB_USER, DB_PASSWORD, $opt );
 
 }
 

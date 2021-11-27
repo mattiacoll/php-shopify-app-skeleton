@@ -23,7 +23,7 @@ if ( verifyHMAC( $hmac, $message ) ) {
   if ( $client_id === -1 )
     die( 'Unable to process request. ERROR: O-R-1' );
 
-  header( 'Location: https://'.$shop.'.myshopify.com/admin/oauth/authorize?client_id='.$k.'&scope='.implode( ',', $permissions ).'&redirect_uri='.$app_url.'/postoauth.php&state='.$nonce );
+  header( 'Location: https://'.$shop.'.myshopify.com/admin/oauth/authorize?client_id='.APP_KEY.'&scope='.APP_PERMISSION.'&redirect_uri='.APP_URL.'/postoauth.php&state='.$nonce );
 
 }
 

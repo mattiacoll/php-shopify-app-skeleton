@@ -31,8 +31,8 @@ if ( verifyHMAC( $hmac, $message ) ) {
 
 
   $query = [
-    'client_id'     => $k,
-    'client_secret' => $s,
+    'client_id'     => APP_KEY,
+    'client_secret' => APP_SECRET,
     'code'          => $code,
   ];
 
@@ -55,7 +55,7 @@ if ( verifyHMAC( $hmac, $message ) ) {
 
   $hmac = generateHMAC( $client_id );
 
-  header( 'Location: '.$redirect_url.'?shop='.$shop.'&hmac='.$hmac );
+  header( 'Location: '.APP_REDIRECT.'?shop='.$shop.'&hmac='.$hmac );
 
 }
 
@@ -102,10 +102,8 @@ function verifyHost( $shop ) {
 
 function generateHMAC( $client_id ) {
 
-  global $s;
-
   $nonce = generateNonce( $client_id );
-  $hmac  = hash_hmac( 'sha256', $nonce, $s );
+  $hmac  = hash_hmac( 'sha256', $nonce, APP_SECRET );
 
   storeHMAC( $client_id, $hmac );
 
