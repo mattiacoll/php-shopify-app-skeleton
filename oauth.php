@@ -33,13 +33,12 @@ function processClient( $shop ) {
 
   try {
 
-    $pdo;
-    connect_db( $pdo );
+    $pdo = connect_db();
 
     $stm = $pdo->prepare( 'SELECT client_id FROM clients WHERE client_name = ?' );
 
     $stm->execute([ $shop ]);
-    $stm->fetchAll();
+    $result = $stm->fetchAll();
 
     if ( count( $result ) )
       $client_id = $result[0]['client_id'];
@@ -75,8 +74,7 @@ function createClient( $shop ) {
 
   try {
 
-    $pdo;
-    connect_db( $pdo );
+    $pdo = connect_db();
 
     $stm = $pdo->prepare( 'INSERT INTO clients (client_name) VALUES (?)' );
     $stm->execute([ $shop ]);

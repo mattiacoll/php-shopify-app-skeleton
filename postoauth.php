@@ -16,6 +16,12 @@ unset( $query_no_hmac['hmac']);
 
 $message = http_build_query( $query_no_hmac );
 
+if ( !function_exists( 'str_ends_with' ) ) {
+  function str_ends_with( $haystack, $needle ) {
+    return substr_compare( $haystack, $needle, -strlen( $needle ) ) === 0;
+  }
+}
+
 if ( verifyHMAC( $hmac, $message ) ) {
 
   $client_id = getClientId( $shop );
@@ -23,7 +29,7 @@ if ( verifyHMAC( $hmac, $message ) ) {
   if ( $client_id === -1 )
     die( 'Unable to process request. ERROR: PO-R-1' );
 
-  if ( !verifyNonce() )
+  if ( !verifyNonce( $client_id, $nonce ) )
     die( 'Unable to process request. ERROR: PO-R-3' );
 
   if ( !verifyHost( $shop ) )
@@ -59,7 +65,7 @@ if ( verifyHMAC( $hmac, $message ) ) {
 
 }
 
-function verifyNonce() {
+function verifyNonce( $client_id, $nonce ) {
 
   try {
 
@@ -151,11 +157,5 @@ function storeToken( $client_id, $token ) {
     if ( $pdo )
       $pdo = null;
 
-  }
-}
-
-if ( !function_exists( 'str_ends_with' ) ) {
-  function str_ends_with( $haystack, $needle ) {
-    return substr_compare( $haystack, $needle, -strlen( $needle ) ) === 0;
   }
 }
