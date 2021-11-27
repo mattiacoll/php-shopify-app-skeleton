@@ -1,6 +1,6 @@
 <?php
 
-include_once 'utils/utils.php';
+include_once realpath( __DIR__ . '/utils.php' );
 
 $shop      = $_GET['shop'];
 $hmac      = $_GET['hmac'];

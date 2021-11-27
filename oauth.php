@@ -2,7 +2,7 @@
 
 //UA - User Authentication
 
-include_once 'utils/utils.php';
+include_once realpath( __DIR__ . '/utils.php' );
 
 $hmac  = $_GET['hmac'];
 

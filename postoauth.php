@@ -2,7 +2,7 @@
 
 //AS - App Setup
 
-include_once 'utils/utils.php';
+include_once realpath( __DIR__ . '/utils.php' );
 
 $query = [];
 parse_str( $_SERVER['QUERY_STRING'], $query );

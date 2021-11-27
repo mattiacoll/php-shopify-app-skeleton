@@ -1,6 +1,6 @@
 <?php
 
-include_once 'config.php';
+include_once realpath( __DIR__ . '/config.php' );
 
 function verifyHMAC( string $hmac, string $message, int $client_id = -1 ) {
 
