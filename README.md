@@ -3,117 +3,24 @@ A bare-bones Shopify app written in plain PHP with no framework
 
 <p>This is a very basic stripped down Shopify app that was designed to be as plug and play as possible. It does require a database setup with two tables in it and uses MySQL to work with the database. The table structures are as follows:</p>
 
-<table>
-  <th colspan="6">clients</th>
-  <tr>
-    <th>Column Name</th>
-    <th>Type</th>
-    <th>NULL</th>
-    <th>Key</th>	
-    <th>Default</th>
-    <th>Extra</th>
-  </tr>
-  <tr>
-    <td>client_id</td>
-    <td>int(11)</td>
-    <td>NO</td>
-    <td>PRI</td>	
-    <td>NULL</td>
-    <td>auto_increment</td>
-  </tr>
-  <tr>
-    <td>client_name</td>
-    <td>varchar(255)</td>
-    <td>NO</td>
-    <td></td>	
-    <td>NULL</td>
-    <td></td>
-  </tr>
-</table>
+## clients
+| Column name | Type         | NULL | Key | Default | Extra          |
+| ---         | ---          | ---  | --- | ---     | ---            |
+| client_id   | int(11)      | NO   | PRI | NULL    | auto_increment |
+| client_name | varchar(255) | NO   |     | NULL    |                |
 
-<table>
-  <th colspan="6">client_stores</th>
-  <tr>
-    <th>Column Name</th>
-    <th>Type</th>
-    <th>NULL</th>
-    <th>Key</th>	
-    <th>Default</th>
-    <th>Extra</th>
-  </tr>
-  <tr>
-    <td>store_id</td>
-    <td>int(11)</td>
-    <td>NO</td>
-    <td>PRI</td>	
-    <td>NULL</td>
-    <td>auto_increment</td>
-  </tr>
-  <tr>
-    <td>client_id</td>
-    <td>int(11)</td>
-    <td>NO</td>
-    <td></td>	
-    <td>NULL</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>store_name</td>
-    <td>varchar(255)</td>
-    <td>NO</td>
-    <td></td>	
-    <td>NULL</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>token</td>
-    <td>varchar(255)</td>
-    <td>NO</td>
-    <td></td>	
-    <td>NULL</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>hmac</td>
-    <td>varchar(255)</td>
-    <td>YES</td>
-    <td></td>	
-    <td>NULL</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>nonce</td>
-    <td>varchar(255)</td>
-    <td>YES</td>
-    <td></td>	
-    <td>NULL</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>url</td>
-    <td>varchar(255)</td>
-    <td>NO</td>
-    <td></td>	
-    <td>NULL</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>last_activity</td>
-    <td>datetime</td>
-    <td>NO</td>
-    <td></td>	
-    <td>CURRENT_TIMESTAMP</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>active</td>
-    <td>tinyint(4)</td>
-    <td>NO</td>
-    <td></td>	
-    <td>1</td>
-    <td></td>
-  </tr>
-</table>
+## client_stores
+| Column Name   | Type         | NULL | Key | Default           | Extra          |
+| ---           | ---          | ---  | --- | ---               | ---            |
+| store_id      | int(11)      | NO   | PRI | NULL              | auto_increment |
+| client_id     | int(11)      | NO   |     | NULL              |                |
+| store_name    | varchar(255) | NO   |     | NULL              |                |
+| token         | varchar(255) | NO   |     | NULL              |                |
+| hmac          | varchar(255) | YES  |     | NULL              |                |
+| nonce         | varchar(255) | YES  |     | NULL              |                |
+| url           | varchar(255) | NO   |     | NULL              |                |
+| last_activity | datetime     | NO   |     | CURRENT_TIMESTAMP |                |
+| active        | tinyint(4)   | NO   |     | 1                 |                |
 
 The main purpose of writing this was the lack of something quick, simple, and ready to go. Most tutorials are in Ruby using the `shopify_app` gem. I tried this and had nothing but headaches getting it to work. After having to download multiple pieces of software, plugins, frameworks, etc I had an app that didn't run but still somehow managed to take up around 96MB.
 
@@ -146,20 +53,20 @@ rm LICENSE
 6. Click `Create app` in the top right
 
 ### Add your app Key and Secret Key to `config.php`
-The next screen after clicking `Create app` should display these keys for you. Inside `config.php` set `$k` to the API key, and then set `$s` to the API secret key
+The next screen after clicking `Create app` should display these keys for you. Inside `config.php` set `APP_KEY` to the API key, and then set `APP_SECRET` to the API secret key
 
 ### Set your app permissions in `config.php`
-Modify the `$permissions` array to contain all permissions your app will need
+Modify the `APP_PERMISSION` array to contain all permissions your app will need
 
 ### Connect your database in `config.php`
 Create a database containing two tables with the given structure above. Be sure to create/add a user to this database. The permissions this user needs to have are at minimum `SELECT`, `UPDATE` and `INSERT`.
 
 Inside `config.php` do the following:
 
-1. Set `$sn` to your server name. If your database is on the same server this app is hosted it will likely need to be set to `localhost`. Other wise if it is hosted elsewhere it should be set to the IP address of the server hosting the database.
-2. Set `$un` to the database's user account name
-3. Set `$pw` to the user account's password
-4. Set `$dn` to the name of the database
+1. Set `DB_HOST` to your server name. If your database is on the same server this app is hosted it will likely need to be set to `localhost`. Other wise if it is hosted elsewhere it should be set to the IP address of the server hosting the database.
+2. Set `DB_USER` to the database's user account name
+3. Set `DB_PASSWORD` to the user account's password
+4. Set `DB_NAME` to the name of the database
 
 ### Upload your app to your server
 Of course, the final step here is to upload all of the files for the app to your server. Once that is done your app should be ready to be installed on a development store. This is found under `More actions` when viewing your app inside of Shopify Partners.
