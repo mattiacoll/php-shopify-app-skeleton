@@ -11,8 +11,7 @@ function verifyHMAC( string $hmac, string $message, int $client_id = -1 ) {
 
     try {
 
-      $pdo;
-      connect_db( $pdo );
+      $pdo = connect_db();
 
       $stm = $pdo->prepare( 'SELECT nonce FROM client_stores WHERE client_id = ? AND last_activity >= NOW() - INTERVAL 10 SECOND AND active = 1' );
       $stm->execute([ $client_id ]);
@@ -25,7 +24,14 @@ function verifyHMAC( string $hmac, string $message, int $client_id = -1 ) {
         die( 'Unable to process request.' );
 
     } catch ( PDOException $err ) {
+
       die( 'Unable to process request. ' . $err->getMessage() );
+
+    } finally {
+
+      if ( $pdo )
+        $pdo = null;
+
     }
 
   }
@@ -37,7 +43,7 @@ function verifyHMAC( string $hmac, string $message, int $client_id = -1 ) {
 }
 
 
-function connect_db( &$pdo ) {
+function connect_db() {
 
   global $sn, $dn, $un, $pw;
 
@@ -47,7 +53,7 @@ function connect_db( &$pdo ) {
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
   ];
 
-  $pdo = new PDO( $dsn, $un, $pw, $opt );
+  return new PDO( $dsn, $un, $pw, $opt );
 
 }
 
@@ -77,16 +83,20 @@ function storeNonce( $client_id, $nonce ) {
 
   try {
 
-    $pdo;
-    connect_db( $pdo );
+    $pdo = connect_db();
 
     $stm = $pdo->prepare( 'UPDATE client_stores SET nonce = ? WHERE client_id = ?' );
     $stm->execute([ $nonce, $client_id ]);
 
-    $pdo = null;
-
   } catch ( PDOException $err ) {
+
     die( 'Unable to process request. ' . $err->getMessage() );
+
+  } finally {
+
+    if ( $pdo )
+      $pdo = null;
+
   }
 
 }
@@ -98,21 +108,25 @@ function getClientId( $shop ) {
 
   try {
 
-    $pdo;
-    connect_db( $pdo );
+    $pdo = connect_db();
 
     $stm = $pdo->prepare( 'SELECT client_id FROM clients WHERE client_name = ?' );
-    $stm->execute(array($shop));
+    $stm->execute([ $shop ]);
 
     $result = $stm->fetchAll();
 
     if ( count( $result ) )
       $client_id = $result[0]['client_id'];
 
-    $pdo = null;
-
   } catch ( PDOException $err ) {
+
     die( 'Unable to process request. ' . $err->getMessage() );
+
+  } finally {
+
+    if ( $pdo )
+      $pdo = null;
+
   }
 
   return $client_id;
