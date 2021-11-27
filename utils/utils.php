@@ -111,7 +111,7 @@ function getClientId( $shop ) {
     $pdo = connect_db();
 
     $stm = $pdo->prepare( 'SELECT client_id FROM clients WHERE client_name = ?' );
-    $stm->execute([ $shop ]);
+    $stm->execute([ str_replace( '.myshopify.com', '', $shop ) ]);
 
     $result = $stm->fetchAll();
 

@@ -4,236 +4,160 @@
 
 include_once 'utils/utils.php';
 
-$query = array();
-parse_str($_SERVER['QUERY_STRING'], $query);
-$shop = $_GET['shop'];
-$code = $_GET['code'];
-$hmac = $_GET['hmac'];
+$query = [];
+parse_str( $_SERVER['QUERY_STRING'], $query );
+$shop  = $_GET['shop'];
+$code  = $_GET['code'];
+$hmac  = $_GET['hmac'];
 $nonce = $_GET['state'];
 
 $query_no_hmac = $query;
-unset($query_no_hmac['hmac']);
+unset( $query_no_hmac['hmac']);
 
-$message = http_build_query($query_no_hmac);
+$message = http_build_query( $query_no_hmac );
 
-if ( verifyHMAC( $hmac, $message ) ){
-  $client_id = processClient($shop);
+if ( verifyHMAC( $hmac, $message ) ) {
 
-  if($client_id == -1){
-    die("Unable to process request. ERROR: PO-R-1");
-  }
+  $client_id = getClientId( $shop );
 
-  if(verifyNonce()){
-    if(verifyHost()){
+  if ( $client_id === -1 )
+    die( 'Unable to process request. ERROR: PO-R-1' );
 
-      $query = array(
-        "client_id" => $k,
-        "client_secret" => $s,
-        "code" => $code
-      );
+  if ( !verifyNonce() )
+    die( 'Unable to process request. ERROR: PO-R-3' );
 
-      $access_token_url = "https://" . $_GET['shop'] . "/admin/oauth/access_token";
+  if ( !verifyHost( $shop ) )
+    die( 'Unable to process request. ERROR: PO-R-2' );
 
-      $ch = curl_init();
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
-      curl_setopt($ch, CURLOPT_URL, $access_token_url);
-      curl_setopt($ch, CURLOPT_POST, count($query));
-      curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($query));
-      $result = curl_exec($ch);
-      curl_close($ch);
-      $result = json_decode($result, true);
-      $access_token = $result['access_token'];
 
-          storeToken($client_id, $access_token);
+  $query = [
+    'client_id'     => $k,
+    'client_secret' => $s,
+    'code'          => $code,
+  ];
 
-      $hmac = generateHMAC($client_id);
+  $access_token_url = 'https://' . $shop . '/admin/oauth/access_token';
 
-          header("Location: ".$redirect_url."?shop=".$_GET['shop']."&hmac=".$hmac);
-    }
-    else{
-      die("Unable to process request. ERROR: PO-R-2");
-    }
-  }
-  else{
-    die("Unable to process request. ERROR: PO-R-3");
-  }
+  $ch = curl_init();
+  curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
+  curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, 0 );
+  curl_setopt( $ch, CURLOPT_URL, $access_token_url );
+  curl_setopt( $ch, CURLOPT_POST, count( $query ) );
+  curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query( $query ) );
+
+  $result = curl_exec( $ch );
+  curl_close( $ch );
+
+  $result = json_decode( $result, true );
+  $access_token = $result['access_token'];
+
+  storeToken( $client_id, $access_token );
+
+  $hmac = generateHMAC( $client_id );
+
+  header( 'Location: '.$redirect_url.'?shop='.$shop.'&hmac='.$hmac );
 
 }
 
-function verifyNonce(){
+function verifyNonce() {
 
-  global $sn, $dn, $un, $pw, $client_id, $nonce;
-  
-  $dsn = "mysql:host=".$sn.";dbname=".$dn.";charset=utf8";
-  $opt = array(
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-  );
+  try {
 
-  $return_check = $pdo = new PDO($dsn, $un, $pw, $opt);
-  if($return_check === false){
-    die("Unable to process request. ERROR: PO-VN-1");
+    $pdo = connect_db();
+
+    $stm = $pdo->prepare( 'SELECT nonce FROM client_stores WHERE client_id = ?' );
+    $stm->execute([ $client_id ]);
+
+    $result = $stm->fetchAll();
+
+    if ( count( $result ) )
+      $check = $result[0]['nonce'];
+
+    $stm = $pdo->prepare( 'UPDATE client_stores SET nonce = "" WHERE client_id = ?' );
+    $stm->execute([ $client_id ]);
+
+    return ( $nonce === $check );
+
+  } catch ( PDOException $err ) {
+
+    die( 'Unable to process request. ' . $err->getMessage() );
+
+  } finally {
+
+    if ( $pdo )
+      $pdo = null;
+
   }
-  $return_check = $stm = $pdo->prepare("SELECT nonce FROM client_stores WHERE client_id = ?");
-  if($return_check === false){
-    die("Unable to process request. ERROR: PO-VN-2");
-  }
-  $return_check = $stm->execute(array($client_id));
-
-  if($return_check === false){
-    die("Unable to process request. ERROR: PO-VN-3");
-  }
-
-  $result = $stm->fetchAll();
-
-  if(count($result) !== 0){
-    $check = $result[0]['nonce'];
-  }
-  else{
-    die("Unable to process request. ERROR: PO-VN-4");
-  }
-
-  $return_check = $stm = $pdo->prepare("UPDATE client_stores SET nonce = '' WHERE client_id = ?");
-  if($return_check === false){
-    echo "Unable to process request. ERROR: PO-VN-5";
-    die();
-  }
-  $return_check = $stm->execute(array($client_id));
-
-  if($return_check === false){
-    echo "Unable to process request. ERROR: PO-VN-6";
-    die();
-  }
-
-  if($nonce == $check){
-    return true;
-  }
-
-  return false;
 }
 
-function verifyHost(){
-  global $shop;
-  if(endswith($shop, '.myshopify.com')){
-    $shop = str_replace('.myshopify.com', '', $shop);
-    if(preg_match('/[a-z\.\-0-9]/i', $shop)){
-      return true;
-    }
+function verifyHost( $shop ) {
 
+  if ( !str_ends_with( $shop, '.myshopify.com' ) )
     return false;
-  }
+
+  $shop = str_replace( '.myshopify.com', '', $shop );
+  return ( preg_match( '/[a-z\.\-0-9]/i', $shop ) );
+
 }
 
-function processClient($shop){
+function generateHMAC( $client_id ) {
 
-  global $sn, $dn, $un, $pw;
-
-  $client_id = -1;
-  
-  $dsn = "mysql:host=".$sn.";dbname=".$dn.";charset=utf8";
-  $opt = array(
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-  );
-
-  $return_check = $pdo = new PDO($dsn, $un, $pw, $opt);
-  if($return_check === false){
-    die("Unable to process request. ERROR: PO-PC-1");
-  }
-  $return_check = $stm = $pdo->prepare("SELECT client_id FROM clients WHERE client_name = ?");
-  if($return_check === false){
-    die("Unable to process request. ERROR: PO-PC-2");
-  }
-  $return_check = $stm->execute(array(str_replace('.myshopify.com', '', $shop)));
-
-  if($return_check === false){
-    die("Unable to process request. ERROR: PO-PC-3");
-  }
-
-  $result = $stm->fetchAll();
-
-  if(count($result) !== 0){
-    return $result[0]['client_id'];
-  }
-  else{
-    die("Unable to process request. ERROR: PO-PC-4");
-  }
-}
-
-function generateHMAC($client_id){
   global $s;
 
-  $nonce = generateNonce($client_id);
+  $nonce = generateNonce( $client_id );
+  $hmac  = hash_hmac( 'sha256', $nonce, $s );
 
-  $hmac = hash_hmac('sha256', $nonce, $s);
-
-  storeHMAC($client_id, $hmac);
+  storeHMAC( $client_id, $hmac );
 
   return $hmac;
+
 }
 
 
-function storeHMAC($client_id, $hmac){
-  global $sn, $dn, $un, $pw;
-  
-  $dsn = "mysql:host=".$sn.";dbname=".$dn.";charset=utf8";
-  $opt = array(
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-  );
+function storeHMAC( $client_id, $hmac ) {
 
-  ini_set('display_errors', 'Off');
+  try {
 
-  $return_check = $pdo = new PDO($dsn, $un, $pw, $opt);
-  if($return_check === false){
-    echo "Unable to process request. ERROR: PO-SH-1";
-    die();
-  }
-  $return_check = $stm = $pdo->prepare("UPDATE client_stores SET hmac = ?, last_activity = NOW() WHERE client_id = ?");
-  if($return_check === false){
-    echo "Unable to process request. ERROR: PO-SH-2";
-    die();
-  }
-  $return_check = $stm->execute(array($hmac, $client_id));
+    $pdo = connect_db();
 
-  if($return_check === false){
-    echo "Unable to process request. ERROR: PO-SH-3";
-    die();
-  }
-}
+    $stm = $pdo->prepare( 'UPDATE client_stores SET hmac = ?, last_activity = NOW() WHERE client_id = ?' );
+    $stm->execute([ $hmac, $client_id ]);
 
-function storeToken($client_id, $token){
-  global $sn, $dn, $un, $pw;
-  
-  $dsn = "mysql:host=".$sn.";dbname=".$dn.";charset=utf8";
-  $opt = array(
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
-  );
+  } catch ( PDOException $err ) {
 
-  ini_set('display_errors', 'Off');
+    die( 'Unable to process request. ' . $err->getMessage() );
 
-  $return_check = $pdo = new PDO($dsn, $un, $pw, $opt);
-  if($return_check === false){
-    die("Unable to process request. ERROR: PO-ST-1");
-  }
-  $return_check = $stm = $pdo->prepare("UPDATE client_stores SET token = ? WHERE client_id = ?");
-  if($return_check === false){
-    die("Unable to process request. ERROR: PO-ST-2");
-  }
-  $return_check = $stm->execute(array($token, $client_id));
+  } finally {
 
-  if($return_check === false){
-    die("Unable to process request. ERROR: PO-ST-3");
+    if ( $pdo )
+      $pdo = null;
 
   }
 }
 
-function endswith($string, $test) {
-  $strlen = strlen($string);
-  $testlen = strlen($test);
-  if ($testlen > $strlen) return false;{
-    return substr_compare($string, $test, $strlen - $testlen, $testlen) === 0;
+function storeToken( $client_id, $token ) {
+
+  try {
+
+    $pdo = connect_db();
+
+    $stm = $pdo->prepare( 'UPDATE client_stores SET token = ? WHERE client_id = ?' );
+    $stm->execute([ $token, $client_id ]);
+
+  } catch ( PDOException $err ) {
+
+    die( 'Unable to process request. ' . $err->getMessage() );
+
+  } finally {
+
+    if ( $pdo )
+      $pdo = null;
+
+  }
+}
+
+if ( !function_exists( 'str_ends_with' ) ) {
+  function str_ends_with( $haystack, $needle ) {
+    return substr_compare( $haystack, $needle, -strlen( $needle ) ) === 0;
   }
 }

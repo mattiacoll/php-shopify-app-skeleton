@@ -2,7 +2,7 @@
 
 include_once 'utils/utils.php';
 
-$shop      = str_replace( '.myshopify.com', '', $_GET['shop']);
+$shop      = $_GET['shop'];
 $hmac      = $_GET['hmac'];
 $client_id = getClientId( $shop );
 
